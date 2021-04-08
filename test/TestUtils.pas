@@ -22,8 +22,8 @@ interface
 
 uses
   System.Classes, System.SysUtils, System.Math, TestFramework,
-  Oz.Solid.Types, Oz.Solid.Svg, Oz.Solid.VectorInt, Oz.Solid.Boolean,
-  Oz.Solid.EarTri, Oz.Solid.DelaunayTri;
+  Oz.Solid.Types, Oz.Solid.Intersect, Oz.Solid.Svg, Oz.Solid.VectorInt,
+  Oz.Solid.Boolean, Oz.Solid.EarTri, Oz.Solid.DelaunayTri, Oz.Solid.Polygon;
 
 {$Region 'Test2dPoint'}
 
@@ -81,7 +81,21 @@ type
     procedure SetUp; override;
     procedure TearDown; override;
   published
-    procedure TestTri;
+    procedure TestTri10;
+    procedure TestTri100;
+  end;
+
+{$EndRegion}
+
+{$Region 'Polygon'}
+
+  TestPolygon = class(TTestCase)
+  public
+    Pb: TPolyBuilder;
+    procedure SetUp; override;
+    procedure TearDown; override;
+  published
+    procedure TestSqSq;
   end;
 
 {$EndRegion}
@@ -334,7 +348,6 @@ end;
 procedure TestDelaunayTri.SetUp;
 begin
   inherited;
-
 end;
 
 procedure TestDelaunayTri.TearDown;
@@ -343,72 +356,41 @@ begin
   Tri.Free;
 end;
 
-procedure TestDelaunayTri.TestTri;
-const
-  NMAX = 1001;
-type
-  TIntArray = array [0 .. NMAX - 1] of Integer;
-var
-  n, cnt: Integer;      // number of input points
-  x, y, z: TIntArray;   // input points xy, z = x^2 + y^2
-  i, j, k, m: Integer;  // indices of four points
-  xn, yn, zn: Integer;  // outward vector normal to (i, j, k)
-  flag: Boolean;        // True if m above of (i, j, k)
-  F: Integer;           // # of lower faces
-  str: TStrings;
-  line: string;
-  sa: TArray<string>;
+procedure TestDelaunayTri.TestTri10;
+begin
+  filename := '..\..\..\data\dt_10';
+  Tri := TDelaunayTri.Create(filename);
+  Tri.Build;
+end;
+
+procedure TestDelaunayTri.TestTri100;
 begin
   filename := '..\..\..\data\dt_100';
-  F := 0;
-  // Input points and compute z = x^2 + y^2.
-  str := TStringList.Create;
-  try
-    str.LoadFromFile(filename);
-    line := str.Strings[0];
-    n := Integer.Parse(line);
-    cnt := 0;
-    for i := 1 to n do
-    begin
-      line := str.Strings[i];
-      sa := line.Split([Chr(9)]);
-      if sa = nil then break;
-      x[i] := Integer.Parse(sa[0]);
-      y[i] := Integer.Parse(sa[1]);
-      z[i] := x[i] * x[i] + y[i] * y[i];
-      Inc(cnt);
-    end;
-    CheckTrue(cnt = n);
-  finally
-    str.Free;
-  end;
-  // For each triple (i, j, k)
-  for i := 0 to n - 3 do
-    for j := i + 1 to n - 1 do
-     for k := i + 1 to n - 1 do
-       if j <> k  then
-       begin
-        // Compute normal to triangle (i, j, k).
-        xn := (y[j] - y[i]) * (z[k] - z[i]) - (y[k] - y[i]) * (z[j] - z[i]);
-        yn := (x[k] - x[i]) * (z[j] - z[i]) - (x[j] - x[i]) * (z[k] - z[i]);
-        zn := (x[j] - x[i]) * (y[k] - y[i]) - (x[k] - x[i]) * (y[j] - y[i]);
-        // Only examine faces on bottom of paraboloid: zn < 0.
-        flag := zn < 0;
-        if flag then
-          // For each other point m
-          for m := 0 to n - 1 do
-            // Check if m above (i,j,k).
-            flag := flag and
-              (((x[m] - x[i]) * xn +
-                (y[m] - y[i]) * yn +
-                (z[m] - z[i]) * zn) <= 0);
-        if flag then
-        begin
-          Tri.io.Dbp('z=%10d; lower face indices: %d, %d, %d', [zn, i, j, k]);
-          Inc(F);
-        end;
-      end;
-  Tri.io.Dbp('A total of %d lower faces found.', [F]);
+  Tri := TDelaunayTri.Create(filename);
+  Tri.Build;
+end;
+
+{$EndRegion}
+
+{$Region 'Polygon'}
+
+procedure TestPolygon.SetUp;
+begin
+  inherited;
+end;
+
+procedure TestPolygon.TearDown;
+begin
+  inherited;
+end;
+
+procedure TestPolygon.TestSqSq;
+var
+  filename: string;
+begin
+  filename := '..\..\..\data\i.sqsq';
+  Pb.Build(filename);
+  Pb.Free;
 end;
 
 {$EndRegion}
@@ -493,6 +475,7 @@ end;
 {$EndRegion}
 
 initialization
+  RegisterTest(TestPolygon.Suite);
   RegisterTest(TestDelaunayTri.Suite);
   RegisterTest(TestEarTri.Suite);
   RegisterTest(Test2dPoint.Suite);
